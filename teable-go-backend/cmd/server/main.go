@@ -13,9 +13,11 @@ import (
 
 	"teable-go-backend/internal/application"
 	"teable-go-backend/internal/config"
+	"teable-go-backend/internal/domain/space"
 	"teable-go-backend/internal/domain/user"
 	"teable-go-backend/internal/infrastructure/cache"
 	"teable-go-backend/internal/infrastructure/database"
+	"teable-go-backend/internal/infrastructure/database/models"
 	"teable-go-backend/internal/infrastructure/repository"
 	httpHandlers "teable-go-backend/internal/interfaces/http"
 	"teable-go-backend/internal/interfaces/middleware"
@@ -73,14 +75,14 @@ func main() {
 	// 初始化数据库连接
 	dbConn, err := database.NewConnection(cfg.Database)
 	if err != nil {
-		logger.Fatal("Failed to connect to database", logger.Error(err))
+		logger.Fatal("Failed to connect to database", logger.ErrorField(err))
 	}
 	defer dbConn.Close()
 
 	// 初始化Redis连接
 	redisClient, err := cache.NewRedisClient(cfg.Redis)
 	if err != nil {
-		logger.Fatal("Failed to connect to redis", logger.Error(err))
+		logger.Fatal("Failed to connect to redis", logger.ErrorField(err))
 	}
 	defer redisClient.Close()
 
@@ -90,8 +92,12 @@ func main() {
 	userAppService := application.NewUserService(userDomainService, redisClient, cfg.JWT)
 	authService := middleware.NewJWTAuthService(cfg.JWT, redisClient)
 
-	// 创建Gin引擎
-	router := setupRouter(cfg, dbConn, redisClient, userAppService, authService)
+	// 空间依赖
+	spaceRepo := repository.NewSpaceRepository(dbConn.GetDB())
+	spaceDomainService := space.NewService(spaceRepo)
+
+    // 创建Gin引擎
+    router := setupRouter(cfg, dbConn, redisClient, userAppService, authService, spaceDomainService)
 
 	// 创建HTTP服务器
 	server := &http.Server{
@@ -110,7 +116,7 @@ func main() {
 		)
 		
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", logger.Error(err))
+			logger.Fatal("Failed to start server", logger.ErrorField(err))
 		}
 	}()
 
@@ -126,14 +132,14 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", logger.Error(err))
+		logger.Error("Server forced to shutdown", logger.ErrorField(err))
 	}
 
 	logger.Info("Server exited")
 }
 
 // setupRouter 设置路由
-func setupRouter(cfg *config.Config, dbConn *database.Connection, redisClient *cache.RedisClient, userService *application.UserService, authService middleware.AuthService) *gin.Engine {
+func setupRouter(cfg *config.Config, dbConn *database.Connection, redisClient *cache.RedisClient, userService *application.UserService, authService middleware.AuthService, spaceService space.Service) *gin.Engine {
 	router := gin.New()
 
 	// 基础中间件
@@ -152,10 +158,14 @@ func setupRouter(cfg *config.Config, dbConn *database.Connection, redisClient *c
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
+	// ORM 自动迁移（开发期）
+	_ = dbConn.Migrate(&models.User{}, &models.Account{}, &models.Space{}, &models.SpaceCollaborator{}, &models.Base{}, &models.TableMeta{}, &models.Field{})
+
 	// 设置API路由
 	httpHandlers.SetupRoutes(router, httpHandlers.RouterConfig{
-		UserService: userService,
-		AuthService: authService,
+		UserService:  userService,
+		AuthService:  authService,
+		SpaceService: spaceService,
 	})
 
 	// Swagger文档

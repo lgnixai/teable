@@ -39,7 +39,7 @@ func NewUserHandler(userService *application.UserService) *UserHandler {
 func (h *UserHandler) Register(c *gin.Context) {
 	var req application.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Warn("Invalid register request", logger.Error(err))
+		logger.Warn("Invalid register request", logger.ErrorField(err))
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "请求参数错误",
 			Code:  "INVALID_REQUEST",
@@ -71,7 +71,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 func (h *UserHandler) Login(c *gin.Context) {
 	var req application.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Warn("Invalid login request", logger.Error(err))
+		logger.Warn("Invalid login request", logger.ErrorField(err))
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "请求参数错误",
 			Code:  "INVALID_REQUEST",
@@ -172,7 +172,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 
 	var req application.UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Warn("Invalid update profile request", logger.Error(err))
+		logger.Warn("Invalid update profile request", logger.ErrorField(err))
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "请求参数错误",
 			Code:  "INVALID_REQUEST",
@@ -211,7 +211,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 
 	var req application.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Warn("Invalid change password request", logger.Error(err))
+		logger.Warn("Invalid change password request", logger.ErrorField(err))
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "请求参数错误",
 			Code:  "INVALID_REQUEST",
@@ -355,7 +355,7 @@ func (h *UserHandler) handleError(c *gin.Context, err error) {
 	}
 
 	logger.Error("Internal server error",
-		logger.Error(err),
+		logger.ErrorField(err),
 		logger.String("trace_id", traceID),
 	)
 

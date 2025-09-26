@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"teable-go-backend/internal/config"
-	"teable-go-backend/internal/domain/user"
+	userDomain "teable-go-backend/internal/domain/user"
 	"teable-go-backend/internal/infrastructure/cache"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
@@ -15,14 +15,14 @@ import (
 
 // UserService 用户应用服务
 type UserService struct {
-	userDomainService user.Service
+	userDomainService userDomain.Service
 	cacheService      cache.CacheService
 	jwtConfig         config.JWTConfig
 }
 
 // NewUserService 创建用户应用服务
 func NewUserService(
-	userDomainService user.Service,
+	userDomainService userDomain.Service,
 	cacheService cache.CacheService,
 	jwtConfig config.JWTConfig,
 ) *UserService {
@@ -87,7 +87,7 @@ type UpdateProfileRequest struct {
 // Register 用户注册
 func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error) {
 	// 创建用户
-	createReq := user.CreateUserRequest{
+	createReq := userDomain.CreateUserRequest{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: &req.Password,
@@ -98,7 +98,7 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 	if err != nil {
 		logger.Error("Failed to create user", 
 			logger.String("email", req.Email),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 	if err != nil {
 		logger.Error("Failed to generate tokens",
 			logger.String("user_id", domainUser.ID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 	if err := s.cacheUserInfo(ctx, domainUser); err != nil {
 		logger.Warn("Failed to cache user info",
 			logger.String("user_id", domainUser.ID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 	}
 	
@@ -142,7 +142,7 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 	if err != nil {
 		logger.Warn("Login failed",
 			logger.String("email", req.Email),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 	if err != nil {
 		logger.Error("Failed to generate tokens",
 			logger.String("user_id", domainUser.ID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 	if err := s.cacheUserInfo(ctx, domainUser); err != nil {
 		logger.Warn("Failed to cache user info",
 			logger.String("user_id", domainUser.ID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 	}
 	
@@ -185,7 +185,7 @@ func (s *UserService) Logout(ctx context.Context, userID, token string) error {
 	if err := s.blacklistToken(ctx, token); err != nil {
 		logger.Error("Failed to blacklist token",
 			logger.String("user_id", userID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return err
 	}
@@ -194,7 +194,7 @@ func (s *UserService) Logout(ctx context.Context, userID, token string) error {
 	if err := s.clearUserCache(ctx, userID); err != nil {
 		logger.Warn("Failed to clear user cache",
 			logger.String("user_id", userID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 	}
 	
@@ -217,7 +217,7 @@ func (s *UserService) GetProfile(ctx context.Context, userID string) (*UserRespo
 
 // UpdateProfile 更新用户资料
 func (s *UserService) UpdateProfile(ctx context.Context, userID string, req UpdateProfileRequest) (*UserResponse, error) {
-	updateReq := user.UpdateUserRequest{
+	updateReq := userDomain.UpdateUserRequest{
 		Name:   req.Name,
 		Phone:  req.Phone,
 		Avatar: req.Avatar,
@@ -227,7 +227,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID string, req Upda
 	if err != nil {
 		logger.Error("Failed to update user profile",
 			logger.String("user_id", userID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID string, req Upda
 	if err := s.clearUserCache(ctx, userID); err != nil {
 		logger.Warn("Failed to clear user cache after update",
 			logger.String("user_id", userID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 	}
 	
@@ -253,7 +253,7 @@ func (s *UserService) ChangePassword(ctx context.Context, userID string, req Cha
 	if err != nil {
 		logger.Error("Failed to change password",
 			logger.String("user_id", userID),
-			logger.Error(err),
+			logger.ErrorField(err),
 		)
 		return err
 	}
@@ -276,7 +276,7 @@ func (s *UserService) GetUser(ctx context.Context, userID string) (*UserResponse
 }
 
 // ListUsers 列出用户(管理员功能)
-func (s *UserService) ListUsers(ctx context.Context, filter user.ListFilter) (*user.PaginatedResult, error) {
+func (s *UserService) ListUsers(ctx context.Context, filter userDomain.ListFilter) (*userDomain.PaginatedResult, error) {
 	result, err := s.userDomainService.ListUsers(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -294,7 +294,7 @@ type TokenPair struct {
 }
 
 // generateTokens 生成访问令牌和刷新令牌
-func (s *UserService) generateTokens(user *user.User) (*TokenPair, error) {
+func (s *UserService) generateTokens(user *userDomain.User) (*TokenPair, error) {
 	// 创建临时用户模型用于令牌生成
 	userModel := &struct {
 		ID       string
@@ -349,7 +349,7 @@ func (s *UserService) generateJWTToken(user interface{}, tokenType string) (stri
 	var isAdmin, isSystem bool
 	
 	switch u := user.(type) {
-	case *user.User:
+	case *userDomain.User:
 		userID = u.ID
 		email = u.Email
 		name = u.Name
@@ -392,7 +392,7 @@ func (s *UserService) generateJWTToken(user interface{}, tokenType string) (stri
 }
 
 // cacheUserInfo 缓存用户信息
-func (s *UserService) cacheUserInfo(ctx context.Context, user *user.User) error {
+func (s *UserService) cacheUserInfo(ctx context.Context, user *userDomain.User) error {
 	key := cache.BuildCacheKey(cache.UserCachePrefix, user.ID)
 	return s.cacheService.Set(ctx, key, user, 24*time.Hour)
 }
@@ -411,7 +411,7 @@ func (s *UserService) blacklistToken(ctx context.Context, token string) error {
 }
 
 // toUserResponse 转换为用户响应
-func (s *UserService) toUserResponse(user *user.User) *UserResponse {
+func (s *UserService) toUserResponse(user *userDomain.User) *UserResponse {
 	return &UserResponse{
 		ID:               user.ID,
 		Name:             user.Name,

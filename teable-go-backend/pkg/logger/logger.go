@@ -170,6 +170,6 @@ func Any(key string, val interface{}) zap.Field {
 	return zap.Any(key, val)
 }
 
-func Error(err error) zap.Field {
+func ErrorField(err error) zap.Field {
 	return zap.Error(err)
 }

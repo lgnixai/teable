@@ -8,7 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"teable-go-backend/internal/domain/user"
+	userDomain "teable-go-backend/internal/domain/user"
 	"teable-go-backend/internal/infrastructure/database/models"
 	"teable-go-backend/pkg/errors"
 )
@@ -19,12 +19,12 @@ type UserRepository struct {
 }
 
 // NewUserRepository 创建用户仓储
-func NewUserRepository(db *gorm.DB) user.Repository {
+func NewUserRepository(db *gorm.DB) userDomain.Repository {
 	return &UserRepository{db: db}
 }
 
 // Create 创建用户
-func (r *UserRepository) Create(ctx context.Context, user *user.User) error {
+func (r *UserRepository) Create(ctx context.Context, user *userDomain.User) error {
 	model := r.domainToModel(user)
 	
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
@@ -35,7 +35,7 @@ func (r *UserRepository) Create(ctx context.Context, user *user.User) error {
 }
 
 // GetByID 通过ID获取用户
-func (r *UserRepository) GetByID(ctx context.Context, id string) (*user.User, error) {
+func (r *UserRepository) GetByID(ctx context.Context, id string) (*userDomain.User, error) {
 	var model models.User
 	
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
@@ -49,7 +49,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*user.User, er
 }
 
 // GetByEmail 通过邮箱获取用户
-func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*user.User, error) {
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*userDomain.User, error) {
 	var model models.User
 	
 	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&model).Error; err != nil {
@@ -63,7 +63,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*user.Us
 }
 
 // GetByPhone 通过手机号获取用户
-func (r *UserRepository) GetByPhone(ctx context.Context, phone string) (*user.User, error) {
+func (r *UserRepository) GetByPhone(ctx context.Context, phone string) (*userDomain.User, error) {
 	var model models.User
 	
 	if err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&model).Error; err != nil {
@@ -77,7 +77,7 @@ func (r *UserRepository) GetByPhone(ctx context.Context, phone string) (*user.Us
 }
 
 // Update 更新用户
-func (r *UserRepository) Update(ctx context.Context, user *user.User) error {
+func (r *UserRepository) Update(ctx context.Context, user *userDomain.User) error {
 	model := r.domainToModel(user)
 	
 	if err := r.db.WithContext(ctx).Save(model).Error; err != nil {
@@ -97,8 +97,8 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 }
 
 // List 列出用户
-func (r *UserRepository) List(ctx context.Context, filter user.ListFilter) ([]*user.User, error) {
-	var models []models.User
+func (r *UserRepository) List(ctx context.Context, filter userDomain.ListFilter) ([]*userDomain.User, error) {
+	var modelUsers []models.User
 	
 	query := r.db.WithContext(ctx).Model(&models.User{})
 	
@@ -118,13 +118,13 @@ func (r *UserRepository) List(ctx context.Context, filter user.ListFilter) ([]*u
 		query = query.Offset(filter.Offset)
 	}
 	
-	if err := query.Find(&models).Error; err != nil {
+	if err := query.Find(&modelUsers).Error; err != nil {
 		return nil, r.handleDBError(err)
 	}
 	
 	// 转换为领域对象
-	users := make([]*user.User, len(models))
-	for i, model := range models {
+	users := make([]*userDomain.User, len(modelUsers))
+	for i, model := range modelUsers {
 		users[i] = r.modelToDomain(&model)
 	}
 	
@@ -132,7 +132,7 @@ func (r *UserRepository) List(ctx context.Context, filter user.ListFilter) ([]*u
 }
 
 // Count 统计用户数量
-func (r *UserRepository) Count(ctx context.Context, filter user.CountFilter) (int64, error) {
+func (r *UserRepository) Count(ctx context.Context, filter userDomain.CountFilter) (int64, error) {
 	var count int64
 	
 	query := r.db.WithContext(ctx).Model(&models.User{})
@@ -148,7 +148,7 @@ func (r *UserRepository) Count(ctx context.Context, filter user.CountFilter) (in
 }
 
 // Exists 检查用户是否存在
-func (r *UserRepository) Exists(ctx context.Context, filter user.ExistsFilter) (bool, error) {
+func (r *UserRepository) Exists(ctx context.Context, filter userDomain.ExistsFilter) (bool, error) {
 	var count int64
 	
 	query := r.db.WithContext(ctx).Model(&models.User{})
@@ -172,7 +172,7 @@ func (r *UserRepository) Exists(ctx context.Context, filter user.ExistsFilter) (
 }
 
 // BatchCreate 批量创建用户
-func (r *UserRepository) BatchCreate(ctx context.Context, users []*user.User) error {
+func (r *UserRepository) BatchCreate(ctx context.Context, users []*userDomain.User) error {
 	if len(users) == 0 {
 		return nil
 	}
@@ -190,7 +190,7 @@ func (r *UserRepository) BatchCreate(ctx context.Context, users []*user.User) er
 }
 
 // BatchUpdate 批量更新用户
-func (r *UserRepository) BatchUpdate(ctx context.Context, users []*user.User) error {
+func (r *UserRepository) BatchUpdate(ctx context.Context, users []*userDomain.User) error {
 	if len(users) == 0 {
 		return nil
 	}
@@ -220,7 +220,7 @@ func (r *UserRepository) BatchDelete(ctx context.Context, ids []string) error {
 }
 
 // CreateAccount 创建账户
-func (r *UserRepository) CreateAccount(ctx context.Context, account *user.Account) error {
+func (r *UserRepository) CreateAccount(ctx context.Context, account *userDomain.Account) error {
 	model := r.accountDomainToModel(account)
 	
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
@@ -231,14 +231,14 @@ func (r *UserRepository) CreateAccount(ctx context.Context, account *user.Accoun
 }
 
 // GetAccountsByUserID 获取用户的所有账户
-func (r *UserRepository) GetAccountsByUserID(ctx context.Context, userID string) ([]*user.Account, error) {
+func (r *UserRepository) GetAccountsByUserID(ctx context.Context, userID string) ([]*userDomain.Account, error) {
 	var models []models.Account
 	
 	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&models).Error; err != nil {
 		return nil, r.handleDBError(err)
 	}
 	
-	accounts := make([]*user.Account, len(models))
+	accounts := make([]*userDomain.Account, len(models))
 	for i, model := range models {
 		accounts[i] = r.accountModelToDomain(&model)
 	}
@@ -247,7 +247,7 @@ func (r *UserRepository) GetAccountsByUserID(ctx context.Context, userID string)
 }
 
 // GetAccountByProvider 通过提供商获取账户
-func (r *UserRepository) GetAccountByProvider(ctx context.Context, provider, providerID string) (*user.Account, error) {
+func (r *UserRepository) GetAccountByProvider(ctx context.Context, provider, providerID string) (*userDomain.Account, error) {
 	var model models.Account
 	
 	if err := r.db.WithContext(ctx).Where("provider = ? AND provider_id = ?", provider, providerID).First(&model).Error; err != nil {
@@ -272,7 +272,7 @@ func (r *UserRepository) DeleteAccount(ctx context.Context, id string) error {
 // 辅助方法
 
 // domainToModel 领域对象转数据模型
-func (r *UserRepository) domainToModel(user *user.User) *models.User {
+func (r *UserRepository) domainToModel(user *userDomain.User) *models.User {
 	return &models.User{
 		ID:                   user.ID,
 		Name:                 user.Name,
@@ -295,7 +295,7 @@ func (r *UserRepository) domainToModel(user *user.User) *models.User {
 }
 
 // modelToDomain 数据模型转领域对象
-func (r *UserRepository) modelToDomain(model *models.User) *user.User {
+func (r *UserRepository) modelToDomain(model *models.User) *userDomain.User {
 	isSystem := false
 	isAdmin := false
 	isTrialUsed := false
@@ -315,7 +315,7 @@ func (r *UserRepository) modelToDomain(model *models.User) *user.User {
 		deletedTime = &model.DeletedTime.Time
 	}
 	
-	return &user.User{
+	return &userDomain.User{
 		ID:                   model.ID,
 		Name:                 model.Name,
 		Email:                model.Email,
@@ -338,7 +338,7 @@ func (r *UserRepository) modelToDomain(model *models.User) *user.User {
 }
 
 // accountDomainToModel 账户领域对象转数据模型
-func (r *UserRepository) accountDomainToModel(account *user.Account) *models.Account {
+func (r *UserRepository) accountDomainToModel(account *userDomain.Account) *models.Account {
 	return &models.Account{
 		ID:          account.ID,
 		UserID:      account.UserID,
@@ -350,8 +350,8 @@ func (r *UserRepository) accountDomainToModel(account *user.Account) *models.Acc
 }
 
 // accountModelToDomain 账户数据模型转领域对象
-func (r *UserRepository) accountModelToDomain(model *models.Account) *user.Account {
-	return &user.Account{
+func (r *UserRepository) accountModelToDomain(model *models.Account) *userDomain.Account {
+	return &userDomain.Account{
 		ID:          model.ID,
 		UserID:      model.UserID,
 		Type:        model.Type,
@@ -362,7 +362,7 @@ func (r *UserRepository) accountModelToDomain(model *models.Account) *user.Accou
 }
 
 // applyListFilter 应用列表过滤条件
-func (r *UserRepository) applyListFilter(query *gorm.DB, filter user.ListFilter) *gorm.DB {
+func (r *UserRepository) applyListFilter(query *gorm.DB, filter userDomain.ListFilter) *gorm.DB {
 	if filter.Name != nil {
 		query = query.Where("name LIKE ?", "%"+*filter.Name+"%")
 	}
@@ -403,7 +403,7 @@ func (r *UserRepository) applyListFilter(query *gorm.DB, filter user.ListFilter)
 }
 
 // applyCountFilter 应用计数过滤条件
-func (r *UserRepository) applyCountFilter(query *gorm.DB, filter user.CountFilter) *gorm.DB {
+func (r *UserRepository) applyCountFilter(query *gorm.DB, filter userDomain.CountFilter) *gorm.DB {
 	if filter.Name != nil {
 		query = query.Where("name LIKE ?", "%"+*filter.Name+"%")
 	}

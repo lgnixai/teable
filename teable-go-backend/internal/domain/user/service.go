@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"errors"
-	"time"
 )
 
 // Service 用户领域服务接口
@@ -15,20 +14,20 @@ type Service interface {
 	UpdateUser(ctx context.Context, id string, req UpdateUserRequest) (*User, error)
 	DeleteUser(ctx context.Context, id string) error
 	ListUsers(ctx context.Context, filter ListFilter) (*PaginatedResult, error)
-	
+
 	// 认证相关
 	Authenticate(ctx context.Context, email, password string) (*User, error)
 	ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error
 	ResetPassword(ctx context.Context, email string) error
-	
+
 	// 用户状态管理
 	ActivateUser(ctx context.Context, userID string) error
 	DeactivateUser(ctx context.Context, userID string) error
-	
+
 	// 权限管理
 	PromoteToAdmin(ctx context.Context, userID string) error
 	DemoteFromAdmin(ctx context.Context, userID string) error
-	
+
 	// 第三方账户
 	LinkAccount(ctx context.Context, userID string, req LinkAccountRequest) error
 	UnlinkAccount(ctx context.Context, userID, accountID string) error
@@ -80,7 +79,7 @@ func (s *ServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*U
 	if exists {
 		return nil, ErrEmailExists
 	}
-	
+
 	// 检查手机号是否已存在
 	if req.Phone != nil {
 		exists, err := s.repo.Exists(ctx, ExistsFilter{Phone: req.Phone})
@@ -91,7 +90,7 @@ func (s *ServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*U
 			return nil, ErrPhoneExists
 		}
 	}
-	
+
 	// 创建用户
 	var user *User
 	if req.Password != nil {
@@ -102,7 +101,7 @@ func (s *ServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*U
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 设置其他属性
 	if req.Phone != nil {
 		user.Phone = req.Phone
@@ -110,12 +109,12 @@ func (s *ServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*U
 	if req.Avatar != nil {
 		user.Avatar = req.Avatar
 	}
-	
+
 	// 保存到数据库
 	if err := s.repo.Create(ctx, user); err != nil {
 		return nil, err
 	}
-	
+
 	return user, nil
 }
 
@@ -149,20 +148,20 @@ func (s *ServiceImpl) UpdateUser(ctx context.Context, id string, req UpdateUserR
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 检查用户状态
 	if !user.IsActive() {
 		return nil, ErrUserDeactivated
 	}
-	
+
 	// 更新用户信息
 	user.UpdateProfile(req.Name, req.Phone, req.Avatar)
-	
+
 	// 保存更新
 	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, err
 	}
-	
+
 	return user, nil
 }
 
@@ -172,10 +171,10 @@ func (s *ServiceImpl) DeleteUser(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 软删除
 	user.SoftDelete()
-	
+
 	return s.repo.Update(ctx, user)
 }
 
@@ -185,7 +184,7 @@ func (s *ServiceImpl) ListUsers(ctx context.Context, filter ListFilter) (*Pagina
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 计算总数
 	countFilter := CountFilter{
 		Name:           filter.Name,
@@ -199,19 +198,19 @@ func (s *ServiceImpl) ListUsers(ctx context.Context, filter ListFilter) (*Pagina
 		ModifiedBefore: filter.ModifiedBefore,
 		Search:         filter.Search,
 	}
-	
+
 	total, err := s.repo.Count(ctx, countFilter)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 计算分页信息
 	page := filter.Offset/filter.Limit + 1
-	totalPages := int(total)/filter.Limit
+	totalPages := int(total) / filter.Limit
 	if int(total)%filter.Limit > 0 {
 		totalPages++
 	}
-	
+
 	return &PaginatedResult{
 		Users:      users,
 		Total:      total,
@@ -227,7 +226,7 @@ func (s *ServiceImpl) Authenticate(ctx context.Context, email, password string) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 检查用户状态
 	if !user.IsActive() {
 		if user.GetStatus() == UserStatusDeactivated {
@@ -235,19 +234,19 @@ func (s *ServiceImpl) Authenticate(ctx context.Context, email, password string) 
 		}
 		return nil, ErrUserDeleted
 	}
-	
+
 	// 验证密码
 	if err := user.CheckPassword(password); err != nil {
 		return nil, ErrInvalidPassword
 	}
-	
+
 	// 记录登录时间
 	user.RecordSignIn()
 	if err := s.repo.Update(ctx, user); err != nil {
 		// 登录时间更新失败不影响认证结果
 		// TODO: 记录日志
 	}
-	
+
 	return user, nil
 }
 
@@ -257,22 +256,22 @@ func (s *ServiceImpl) ChangePassword(ctx context.Context, userID, oldPassword, n
 	if err != nil {
 		return err
 	}
-	
+
 	// 检查用户状态
 	if !user.IsActive() {
 		return ErrUserDeactivated
 	}
-	
+
 	// 验证旧密码
 	if err := user.CheckPassword(oldPassword); err != nil {
 		return ErrInvalidPassword
 	}
-	
+
 	// 设置新密码
 	if err := user.SetPassword(newPassword); err != nil {
 		return err
 	}
-	
+
 	return s.repo.Update(ctx, user)
 }
 
@@ -282,17 +281,17 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, email string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 检查用户状态
 	if !user.IsActive() {
 		return ErrUserDeactivated
 	}
-	
+
 	// TODO: 实现密码重置逻辑
 	// 1. 生成重置令牌
 	// 2. 发送重置邮件
 	// 3. 存储令牌到缓存
-	
+
 	return errors.New("password reset not implemented yet")
 }
 
@@ -302,7 +301,7 @@ func (s *ServiceImpl) ActivateUser(ctx context.Context, userID string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	user.Activate()
 	return s.repo.Update(ctx, user)
 }
@@ -313,7 +312,7 @@ func (s *ServiceImpl) DeactivateUser(ctx context.Context, userID string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	user.Deactivate()
 	return s.repo.Update(ctx, user)
 }
@@ -324,7 +323,7 @@ func (s *ServiceImpl) PromoteToAdmin(ctx context.Context, userID string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	user.PromoteToAdmin()
 	return s.repo.Update(ctx, user)
 }
@@ -335,7 +334,7 @@ func (s *ServiceImpl) DemoteFromAdmin(ctx context.Context, userID string) error 
 	if err != nil {
 		return err
 	}
-	
+
 	user.DemoteFromAdmin()
 	return s.repo.Update(ctx, user)
 }
@@ -346,7 +345,7 @@ func (s *ServiceImpl) LinkAccount(ctx context.Context, userID string, req LinkAc
 	if err != nil {
 		return err
 	}
-	
+
 	// 检查提供商账户是否已被其他用户使用
 	existingAccount, err := s.repo.GetAccountByProvider(ctx, string(req.Provider), req.ProviderID)
 	if err != nil {
@@ -355,7 +354,7 @@ func (s *ServiceImpl) LinkAccount(ctx context.Context, userID string, req LinkAc
 	if existingAccount != nil {
 		return errors.New("provider account already linked to another user")
 	}
-	
+
 	// 创建账户关联
 	account := user.AddAccount(req.Type, req.Provider, req.ProviderID)
 	return s.repo.CreateAccount(ctx, account)
@@ -376,6 +375,6 @@ func (s *ServiceImpl) GetUserByProvider(ctx context.Context, provider, providerI
 	if account == nil {
 		return nil, ErrUserNotFound
 	}
-	
+
 	return s.GetUser(ctx, account.UserID)
 }

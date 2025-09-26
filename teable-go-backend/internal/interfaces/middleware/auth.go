@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"teable-go-backend/internal/config"
 	"teable-go-backend/internal/infrastructure/cache"
 	"teable-go-backend/internal/infrastructure/database/models"
-	"teable-go-backend/pkg/errors"
+	appErrors "teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
 )
 
@@ -52,30 +53,30 @@ func (s *JWTAuthService) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		// 检查签名方法
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.ErrInvalidToken
+			return nil, appErrors.ErrInvalidToken
 		}
 		return []byte(s.config.Secret), nil
 	})
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errors.ErrTokenExpired
+			return nil, appErrors.ErrTokenExpired
 		}
-		return nil, errors.ErrInvalidToken
+		return nil, appErrors.ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
-		return nil, errors.ErrInvalidToken
+		return nil, appErrors.ErrInvalidToken
 	}
 
 	// 检查令牌是否在黑名单中
 	isBlacklisted, err := s.isTokenBlacklisted(context.Background(), tokenString)
 	if err != nil {
-		logger.Error("Failed to check token blacklist", logger.Error(err))
+		logger.Error("Failed to check token blacklist", logger.ErrorField(err))
 	}
 	if isBlacklisted {
-		return nil, errors.ErrInvalidToken
+		return nil, appErrors.ErrInvalidToken
 	}
 
 	return claims, nil
@@ -139,7 +140,7 @@ func AuthMiddleware(authService AuthService) gin.HandlerFunc {
 
 		user, err := authService.GetUserFromToken(c.Request.Context(), token)
 		if err != nil {
-			if appErr, ok := errors.IsAppError(err); ok {
+			if appErr, ok := appErrors.IsAppError(err); ok {
 				c.JSON(appErr.HTTPStatus, gin.H{
 					"error": appErr.Message,
 					"code":  appErr.Code,
@@ -293,12 +294,12 @@ func extractToken(c *gin.Context) string {
 func GetCurrentUser(c *gin.Context) (*models.User, error) {
 	user, exists := c.Get("user")
 	if !exists {
-		return nil, errors.ErrUnauthorized
+		return nil, appErrors.ErrUnauthorized
 	}
 
 	u, ok := user.(*models.User)
 	if !ok {
-		return nil, errors.ErrInternalServer
+		return nil, appErrors.ErrInternalServer
 	}
 
 	return u, nil
@@ -308,12 +309,12 @@ func GetCurrentUser(c *gin.Context) (*models.User, error) {
 func GetCurrentUserID(c *gin.Context) (string, error) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		return "", errors.ErrUnauthorized
+		return "", appErrors.ErrUnauthorized
 	}
 
 	id, ok := userID.(string)
 	if !ok {
-		return "", errors.ErrInternalServer
+		return "", appErrors.ErrInternalServer
 	}
 
 	return id, nil

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"teable-go-backend/pkg/logger"
 )
@@ -68,7 +69,7 @@ func LoggingMiddleware(config ...LoggingConfig) gin.HandlerFunc {
 		}
 
 		// 记录请求日志
-		fields := []logger.Field{
+		fields := []zap.Field{
 			logger.String("method", param.Method),
 			logger.String("path", param.Path),
 			logger.String("query", param.Request.URL.RawQuery),
@@ -150,7 +151,7 @@ func DetailedLoggingMiddleware(config ...LoggingConfig) gin.HandlerFunc {
 		latency := time.Since(start)
 
 		// 准备日志字段
-		fields := []logger.Field{
+		fields := []zap.Field{
 			logger.String("method", c.Request.Method),
 			logger.String("path", c.Request.URL.Path),
 			logger.String("query", c.Request.URL.RawQuery),
