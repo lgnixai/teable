@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: teable-test-postgres
+    environment:
+      POSTGRES_DB: teable
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: teable-test-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Go Backend 服务
+  go-backend:
+    build:
+      context: ./teable-go-backend
+      dockerfile: Dockerfile
+    container_name: teable-go-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - TEABLE_SERVER_HOST=0.0.0.0
+      - TEABLE_SERVER_PORT=3000
+      - TEABLE_DATABASE_HOST=postgres
+      - TEABLE_DATABASE_PORT=5432
+      - TEABLE_DATABASE_USER=postgres
+      - TEABLE_DATABASE_PASSWORD=postgres
+      - TEABLE_DATABASE_NAME=teable
+      - TEABLE_REDIS_HOST=redis
+      - TEABLE_REDIS_PORT=6379
+      - TEABLE_JWT_SECRET=test-secret-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./teable-go-backend/config.yaml:/app/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
