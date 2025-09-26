@@ -1,0 +1,152 @@
+{
+  "test_summary": {
+    "total_tests": 14,
+    "successful_tests": 8,
+    "failed_tests": 6,
+    "success_rate": 57.14,
+    "avg_response_time": 0.027,
+    "min_response_time": 0.001,
+    "max_response_time": 0.131
+  },
+  "endpoint_statistics": {
+    "/health": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "response_times": [
+        0.0070650577545166016
+      ],
+      "success_rate": 100.0,
+      "avg_response_time": 0.0070650577545166016
+    },
+    "/ping": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "response_times": [
+        0.0011272430419921875
+      ],
+      "success_rate": 100.0,
+      "avg_response_time": 0.0011272430419921875
+    },
+    "/api/auth/register": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "response_times": [
+        0.06787300109863281
+      ],
+      "success_rate": 100.0,
+      "avg_response_time": 0.06787300109863281
+    },
+    "/api/auth/login": {
+      "total": 1,
+      "successful": 0,
+      "failed": 1,
+      "response_times": [],
+      "success_rate": 0.0,
+      "avg_response_time": 0
+    },
+    "/api/users/profile": {
+      "total": 2,
+      "successful": 2,
+      "failed": 0,
+      "response_times": [
+        0.0014982223510742188,
+        0.0020012855529785156
+      ],
+      "success_rate": 100.0,
+      "avg_response_time": 0.0017497539520263672
+    },
+    "/api/users/change-password": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "response_times": [
+        0.1310889720916748
+      ],
+      "success_rate": 100.0,
+      "avg_response_time": 0.1310889720916748
+    },
+    "/api/spaces": {
+      "total": 2,
+      "successful": 2,
+      "failed": 0,
+      "response_times": [
+        0.002156972885131836,
+        0.0018360614776611328
+      ],
+      "success_rate": 100.0,
+      "avg_response_time": 0.0019965171813964844
+    },
+    "/api/spaces/test-space-id": {
+      "total": 3,
+      "successful": 0,
+      "failed": 3,
+      "response_times": [],
+      "success_rate": 0.0,
+      "avg_response_time": 0
+    },
+    "/api/admin/users": {
+      "total": 1,
+      "successful": 0,
+      "failed": 1,
+      "response_times": [],
+      "success_rate": 0.0,
+      "avg_response_time": 0
+    },
+    "/api/admin/users/test-user-id": {
+      "total": 1,
+      "successful": 0,
+      "failed": 1,
+      "response_times": [],
+      "success_rate": 0.0,
+      "avg_response_time": 0
+    }
+  },
+  "performance_metrics": [],
+  "failed_tests": [
+    {
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "status_code": 500,
+      "error_message": null,
+      "response_time": 0.002
+    },
+    {
+      "endpoint": "/api/spaces/test-space-id",
+      "method": "GET",
+      "status_code": 500,
+      "error_message": null,
+      "response_time": 0.001
+    },
+    {
+      "endpoint": "/api/spaces/test-space-id",
+      "method": "PUT",
+      "status_code": 500,
+      "error_message": null,
+      "response_time": 0.001
+    },
+    {
+      "endpoint": "/api/spaces/test-space-id",
+      "method": "DELETE",
+      "status_code": 500,
+      "error_message": null,
+      "response_time": 0.002
+    },
+    {
+      "endpoint": "/api/admin/users",
+      "method": "GET",
+      "status_code": 403,
+      "error_message": null,
+      "response_time": 0.001
+    },
+    {
+      "endpoint": "/api/admin/users/test-user-id",
+      "method": "GET",
+      "status_code": 403,
+      "error_message": null,
+      "response_time": 0.001
+    }
+  ]
+}

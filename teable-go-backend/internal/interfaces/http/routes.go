@@ -4,22 +4,25 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"teable-go-backend/internal/application"
+	"teable-go-backend/internal/domain/base"
 	"teable-go-backend/internal/domain/space"
 	"teable-go-backend/internal/interfaces/middleware"
 )
 
 // RouterConfig 路由配置
 type RouterConfig struct {
-	UserService *application.UserService
-	AuthService middleware.AuthService
-    SpaceService space.Service
+	UserService  *application.UserService
+	AuthService  middleware.AuthService
+	SpaceService space.Service
+	BaseService  base.Service
 }
 
 // SetupRoutes 设置路由
 func SetupRoutes(router *gin.Engine, config RouterConfig) {
 	// 创建处理器
 	userHandler := NewUserHandler(config.UserService)
-    spaceHandler := NewSpaceHandler(config.SpaceService)
+	spaceHandler := NewSpaceHandler(config.SpaceService)
+	baseHandler := NewBaseHandler(config.BaseService)
 
 	// API v1 路由组
 	v1 := router.Group("/api")
@@ -32,7 +35,7 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 			authGroup.POST("/logout", middleware.AuthMiddleware(config.AuthService), userHandler.Logout)
 		}
 
-        // 用户相关路由 (需要认证)
+		// 用户相关路由 (需要认证)
 		userGroup := v1.Group("/users")
 		userGroup.Use(middleware.AuthMiddleware(config.AuthService))
 		{
@@ -41,16 +44,27 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 			userGroup.POST("/change-password", userHandler.ChangePassword)
 		}
 
-        // 空间相关路由 (需要认证)
-        spaceGroup := v1.Group("/spaces")
-        spaceGroup.Use(middleware.AuthMiddleware(config.AuthService))
-        {
-            spaceGroup.POST("", spaceHandler.CreateSpace)
-            spaceGroup.GET("", spaceHandler.ListSpaces)
-            spaceGroup.GET(":id", spaceHandler.GetSpace)
-            spaceGroup.PUT(":id", spaceHandler.UpdateSpace)
-            spaceGroup.DELETE(":id", spaceHandler.DeleteSpace)
-        }
+		// 空间相关路由 (需要认证)
+		spaceGroup := v1.Group("/spaces")
+		spaceGroup.Use(middleware.AuthMiddleware(config.AuthService))
+		{
+			spaceGroup.POST("", spaceHandler.CreateSpace)
+			spaceGroup.GET("", spaceHandler.ListSpaces)
+			spaceGroup.GET(":id", spaceHandler.GetSpace)
+			spaceGroup.PUT(":id", spaceHandler.UpdateSpace)
+			spaceGroup.DELETE(":id", spaceHandler.DeleteSpace)
+		}
+
+		// 基础表相关路由 (需要认证)
+		baseGroup := v1.Group("/bases")
+		baseGroup.Use(middleware.AuthMiddleware(config.AuthService))
+		{
+			baseGroup.POST("", baseHandler.CreateBase)
+			baseGroup.GET("", baseHandler.ListBases)
+			baseGroup.GET(":id", baseHandler.GetBase)
+			baseGroup.PUT(":id", baseHandler.UpdateBase)
+			baseGroup.DELETE(":id", baseHandler.DeleteBase)
+		}
 
 		// 管理员相关路由 (需要管理员权限)
 		adminGroup := v1.Group("/admin")
@@ -84,10 +98,10 @@ func HealthCheckHandler(c *gin.Context) {
 // InfoHandler 服务信息处理器
 func InfoHandler(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"service": "teable-go-backend",
-		"version": "1.0.0",
+		"service":     "teable-go-backend",
+		"version":     "1.0.0",
 		"description": "Teable后端服务 - Go语言重构版本",
-		"author": "Teable Team",
-		"license": "AGPL-3.0",
+		"author":      "Teable Team",
+		"license":     "AGPL-3.0",
 	})
 }

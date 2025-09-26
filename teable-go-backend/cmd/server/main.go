@@ -13,6 +13,7 @@ import (
 
 	"teable-go-backend/internal/application"
 	"teable-go-backend/internal/config"
+	"teable-go-backend/internal/domain/base"
 	"teable-go-backend/internal/domain/space"
 	"teable-go-backend/internal/domain/user"
 	"teable-go-backend/internal/infrastructure/cache"
@@ -96,8 +97,12 @@ func main() {
 	spaceRepo := repository.NewSpaceRepository(dbConn.GetDB())
 	spaceDomainService := space.NewService(spaceRepo)
 
-    // 创建Gin引擎
-    router := setupRouter(cfg, dbConn, redisClient, userAppService, authService, spaceDomainService)
+	// 基础表依赖
+	baseRepo := repository.NewBaseRepository(dbConn.GetDB())
+	baseDomainService := base.NewService(baseRepo)
+
+	// 创建Gin引擎
+	router := setupRouter(cfg, dbConn, redisClient, userAppService, authService, spaceDomainService, baseDomainService)
 
 	// 创建HTTP服务器
 	server := &http.Server{
@@ -114,7 +119,7 @@ func main() {
 		logger.Info("Server starting",
 			logger.String("addr", server.Addr),
 		)
-		
+
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", logger.ErrorField(err))
 		}
@@ -139,7 +144,7 @@ func main() {
 }
 
 // setupRouter 设置路由
-func setupRouter(cfg *config.Config, dbConn *database.Connection, redisClient *cache.RedisClient, userService *application.UserService, authService middleware.AuthService, spaceService space.Service) *gin.Engine {
+func setupRouter(cfg *config.Config, dbConn *database.Connection, redisClient *cache.RedisClient, userService *application.UserService, authService middleware.AuthService, spaceService space.Service, baseService base.Service) *gin.Engine {
 	router := gin.New()
 
 	// 基础中间件
@@ -166,6 +171,7 @@ func setupRouter(cfg *config.Config, dbConn *database.Connection, redisClient *c
 		UserService:  userService,
 		AuthService:  authService,
 		SpaceService: spaceService,
+		BaseService:  baseService,
 	})
 
 	// Swagger文档

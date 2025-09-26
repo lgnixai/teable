@@ -93,16 +93,16 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 		Password: &req.Password,
 		Phone:    req.Phone,
 	}
-	
+
 	domainUser, err := s.userDomainService.CreateUser(ctx, createReq)
 	if err != nil {
-		logger.Error("Failed to create user", 
+		logger.Error("Failed to create user",
 			logger.String("email", req.Email),
 			logger.ErrorField(err),
 		)
 		return nil, err
 	}
-	
+
 	// 生成令牌
 	tokens, err := s.generateTokens(domainUser)
 	if err != nil {
@@ -112,7 +112,7 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 		)
 		return nil, err
 	}
-	
+
 	// 缓存用户信息
 	if err := s.cacheUserInfo(ctx, domainUser); err != nil {
 		logger.Warn("Failed to cache user info",
@@ -120,12 +120,12 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 			logger.ErrorField(err),
 		)
 	}
-	
+
 	logger.Info("User registered successfully",
 		logger.String("user_id", domainUser.ID),
 		logger.String("email", domainUser.Email),
 	)
-	
+
 	return &AuthResponse{
 		User:         s.toUserResponse(domainUser),
 		AccessToken:  tokens.AccessToken,
@@ -146,7 +146,7 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 		)
 		return nil, err
 	}
-	
+
 	// 生成令牌
 	tokens, err := s.generateTokens(domainUser)
 	if err != nil {
@@ -156,7 +156,7 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 		)
 		return nil, err
 	}
-	
+
 	// 缓存用户信息
 	if err := s.cacheUserInfo(ctx, domainUser); err != nil {
 		logger.Warn("Failed to cache user info",
@@ -164,12 +164,12 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 			logger.ErrorField(err),
 		)
 	}
-	
+
 	logger.Info("User logged in successfully",
 		logger.String("user_id", domainUser.ID),
 		logger.String("email", domainUser.Email),
 	)
-	
+
 	return &AuthResponse{
 		User:         s.toUserResponse(domainUser),
 		AccessToken:  tokens.AccessToken,
@@ -189,7 +189,7 @@ func (s *UserService) Logout(ctx context.Context, userID, token string) error {
 		)
 		return err
 	}
-	
+
 	// 清除用户缓存
 	if err := s.clearUserCache(ctx, userID); err != nil {
 		logger.Warn("Failed to clear user cache",
@@ -197,11 +197,11 @@ func (s *UserService) Logout(ctx context.Context, userID, token string) error {
 			logger.ErrorField(err),
 		)
 	}
-	
+
 	logger.Info("User logged out successfully",
 		logger.String("user_id", userID),
 	)
-	
+
 	return nil
 }
 
@@ -211,7 +211,7 @@ func (s *UserService) GetProfile(ctx context.Context, userID string) (*UserRespo
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return s.toUserResponse(domainUser), nil
 }
 
@@ -222,7 +222,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID string, req Upda
 		Phone:  req.Phone,
 		Avatar: req.Avatar,
 	}
-	
+
 	domainUser, err := s.userDomainService.UpdateUser(ctx, userID, updateReq)
 	if err != nil {
 		logger.Error("Failed to update user profile",
@@ -231,7 +231,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID string, req Upda
 		)
 		return nil, err
 	}
-	
+
 	// 清除用户缓存
 	if err := s.clearUserCache(ctx, userID); err != nil {
 		logger.Warn("Failed to clear user cache after update",
@@ -239,11 +239,11 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID string, req Upda
 			logger.ErrorField(err),
 		)
 	}
-	
+
 	logger.Info("User profile updated successfully",
 		logger.String("user_id", userID),
 	)
-	
+
 	return s.toUserResponse(domainUser), nil
 }
 
@@ -257,11 +257,11 @@ func (s *UserService) ChangePassword(ctx context.Context, userID string, req Cha
 		)
 		return err
 	}
-	
+
 	logger.Info("Password changed successfully",
 		logger.String("user_id", userID),
 	)
-	
+
 	return nil
 }
 
@@ -271,7 +271,7 @@ func (s *UserService) GetUser(ctx context.Context, userID string) (*UserResponse
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return s.toUserResponse(domainUser), nil
 }
 
@@ -281,7 +281,7 @@ func (s *UserService) ListUsers(ctx context.Context, filter userDomain.ListFilte
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return result, nil
 }
 
@@ -309,21 +309,21 @@ func (s *UserService) generateTokens(user *userDomain.User) (*TokenPair, error) 
 		IsAdmin:  user.IsAdmin,
 		IsSystem: user.IsSystem,
 	}
-	
+
 	// 生成访问令牌
-	accessToken, err := s.generateJWTToken(userModel, "access")
+	accessToken, err := s.generateJWTToken(*userModel, "access")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var refreshToken string
 	if s.jwtConfig.EnableRefresh {
-		refreshToken, err = s.generateJWTToken(userModel, "refresh")
+		refreshToken, err = s.generateJWTToken(*userModel, "refresh")
 		if err != nil {
 			return nil, err
 		}
 	}
-	
+
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -334,7 +334,7 @@ func (s *UserService) generateTokens(user *userDomain.User) (*TokenPair, error) 
 func (s *UserService) generateJWTToken(user interface{}, tokenType string) (string, error) {
 	now := time.Now()
 	var exp time.Time
-	
+
 	switch tokenType {
 	case "access":
 		exp = now.Add(s.jwtConfig.AccessTokenTTL)
@@ -343,11 +343,11 @@ func (s *UserService) generateJWTToken(user interface{}, tokenType string) (stri
 	default:
 		exp = now.Add(s.jwtConfig.AccessTokenTTL)
 	}
-	
+
 	// 根据用户类型提取信息
 	var userID, email, name string
 	var isAdmin, isSystem bool
-	
+
 	switch u := user.(type) {
 	case *userDomain.User:
 		userID = u.ID

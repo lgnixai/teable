@@ -1,8 +1,10 @@
 package user
 
 import (
-	"time"
 	"errors"
+	"teable-go-backend/pkg/utils"
+	"time"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -227,12 +229,12 @@ func (u *User) HasPermission(permission string) bool {
 	if u.IsSystem {
 		return true
 	}
-	
+
 	// 管理员拥有管理权限
 	if u.IsAdmin && isAdminPermission(permission) {
 		return true
 	}
-	
+
 	// TODO: 实现更细粒度的权限检查
 	return false
 }
@@ -260,10 +262,10 @@ func (u *User) updateModifiedTime() {
 // isValidEmail 验证邮箱格式
 func isValidEmail(email string) bool {
 	// 简单的邮箱验证，实际应该使用更严格的正则表达式
-	return len(email) > 0 && 
-		   len(email) <= 255 && 
-		   containsChar(email, '@') && 
-		   containsChar(email, '.')
+	return len(email) > 0 &&
+		len(email) <= 255 &&
+		containsChar(email, '@') &&
+		containsChar(email, '.')
 }
 
 // isValidPassword 验证密码强度
@@ -272,10 +274,10 @@ func isValidPassword(password string) bool {
 	if len(password) < 8 {
 		return false
 	}
-	
+
 	hasLetter := false
 	hasDigit := false
-	
+
 	for _, char := range password {
 		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
 			hasLetter = true
@@ -284,7 +286,7 @@ func isValidPassword(password string) bool {
 			hasDigit = true
 		}
 	}
-	
+
 	return hasLetter && hasDigit
 }
 
@@ -306,7 +308,7 @@ func isAdminPermission(permission string) bool {
 		"base:manage",
 		"system:config",
 	}
-	
+
 	for _, perm := range adminPermissions {
 		if perm == permission {
 			return true
@@ -317,12 +319,12 @@ func isAdminPermission(permission string) bool {
 
 // generateUserID 生成用户ID
 func generateUserID() string {
-	return "usr_" + generateNanoID(21)
+	return utils.GenerateUserID()
 }
 
 // generateAccountID 生成账户ID
 func generateAccountID() string {
-	return "acc_" + generateNanoID(21)
+	return utils.GenerateAccountID()
 }
 
 // generateNanoID 生成NanoID(简化实现)

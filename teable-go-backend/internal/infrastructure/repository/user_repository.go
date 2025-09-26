@@ -26,64 +26,64 @@ func NewUserRepository(db *gorm.DB) userDomain.Repository {
 // Create 创建用户
 func (r *UserRepository) Create(ctx context.Context, user *userDomain.User) error {
 	model := r.domainToModel(user)
-	
+
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
 // GetByID 通过ID获取用户
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*userDomain.User, error) {
 	var model models.User
-	
+
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, r.handleDBError(err)
 	}
-	
+
 	return r.modelToDomain(&model), nil
 }
 
 // GetByEmail 通过邮箱获取用户
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*userDomain.User, error) {
 	var model models.User
-	
+
 	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, r.handleDBError(err)
 	}
-	
+
 	return r.modelToDomain(&model), nil
 }
 
 // GetByPhone 通过手机号获取用户
 func (r *UserRepository) GetByPhone(ctx context.Context, phone string) (*userDomain.User, error) {
 	var model models.User
-	
+
 	if err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, r.handleDBError(err)
 	}
-	
+
 	return r.modelToDomain(&model), nil
 }
 
 // Update 更新用户
 func (r *UserRepository) Update(ctx context.Context, user *userDomain.User) error {
 	model := r.domainToModel(user)
-	
+
 	if err := r.db.WithContext(ctx).Save(model).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
@@ -92,24 +92,24 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 	if err := r.db.WithContext(ctx).Delete(&models.User{}, "id = ?", id).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
 // List 列出用户
 func (r *UserRepository) List(ctx context.Context, filter userDomain.ListFilter) ([]*userDomain.User, error) {
 	var modelUsers []models.User
-	
+
 	query := r.db.WithContext(ctx).Model(&models.User{})
-	
+
 	// 应用过滤条件
 	query = r.applyListFilter(query, filter)
-	
+
 	// 应用排序
 	if filter.OrderBy != "" && filter.Order != "" {
 		query = query.Order(fmt.Sprintf("%s %s", filter.OrderBy, filter.Order))
 	}
-	
+
 	// 应用分页
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
@@ -117,42 +117,42 @@ func (r *UserRepository) List(ctx context.Context, filter userDomain.ListFilter)
 	if filter.Offset > 0 {
 		query = query.Offset(filter.Offset)
 	}
-	
+
 	if err := query.Find(&modelUsers).Error; err != nil {
 		return nil, r.handleDBError(err)
 	}
-	
+
 	// 转换为领域对象
 	users := make([]*userDomain.User, len(modelUsers))
 	for i, model := range modelUsers {
 		users[i] = r.modelToDomain(&model)
 	}
-	
+
 	return users, nil
 }
 
 // Count 统计用户数量
 func (r *UserRepository) Count(ctx context.Context, filter userDomain.CountFilter) (int64, error) {
 	var count int64
-	
+
 	query := r.db.WithContext(ctx).Model(&models.User{})
-	
+
 	// 应用过滤条件
 	query = r.applyCountFilter(query, filter)
-	
+
 	if err := query.Count(&count).Error; err != nil {
 		return 0, r.handleDBError(err)
 	}
-	
+
 	return count, nil
 }
 
 // Exists 检查用户是否存在
 func (r *UserRepository) Exists(ctx context.Context, filter userDomain.ExistsFilter) (bool, error) {
 	var count int64
-	
+
 	query := r.db.WithContext(ctx).Model(&models.User{})
-	
+
 	// 应用过滤条件
 	if filter.ID != nil {
 		query = query.Where("id = ?", *filter.ID)
@@ -163,11 +163,11 @@ func (r *UserRepository) Exists(ctx context.Context, filter userDomain.ExistsFil
 	if filter.Phone != nil {
 		query = query.Where("phone = ?", *filter.Phone)
 	}
-	
+
 	if err := query.Count(&count).Error; err != nil {
 		return false, r.handleDBError(err)
 	}
-	
+
 	return count > 0, nil
 }
 
@@ -176,16 +176,16 @@ func (r *UserRepository) BatchCreate(ctx context.Context, users []*userDomain.Us
 	if len(users) == 0 {
 		return nil
 	}
-	
+
 	models := make([]models.User, len(users))
 	for i, user := range users {
 		models[i] = *r.domainToModel(user)
 	}
-	
+
 	if err := r.db.WithContext(ctx).CreateInBatches(models, 100).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
@@ -194,7 +194,7 @@ func (r *UserRepository) BatchUpdate(ctx context.Context, users []*userDomain.Us
 	if len(users) == 0 {
 		return nil
 	}
-	
+
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, user := range users {
 			model := r.domainToModel(user)
@@ -211,52 +211,52 @@ func (r *UserRepository) BatchDelete(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	
+
 	if err := r.db.WithContext(ctx).Delete(&models.User{}, "id IN ?", ids).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
 // CreateAccount 创建账户
 func (r *UserRepository) CreateAccount(ctx context.Context, account *userDomain.Account) error {
 	model := r.accountDomainToModel(account)
-	
+
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
 // GetAccountsByUserID 获取用户的所有账户
 func (r *UserRepository) GetAccountsByUserID(ctx context.Context, userID string) ([]*userDomain.Account, error) {
 	var models []models.Account
-	
+
 	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&models).Error; err != nil {
 		return nil, r.handleDBError(err)
 	}
-	
+
 	accounts := make([]*userDomain.Account, len(models))
 	for i, model := range models {
 		accounts[i] = r.accountModelToDomain(&model)
 	}
-	
+
 	return accounts, nil
 }
 
 // GetAccountByProvider 通过提供商获取账户
 func (r *UserRepository) GetAccountByProvider(ctx context.Context, provider, providerID string) (*userDomain.Account, error) {
 	var model models.Account
-	
+
 	if err := r.db.WithContext(ctx).Where("provider = ? AND provider_id = ?", provider, providerID).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, r.handleDBError(err)
 	}
-	
+
 	return r.accountModelToDomain(&model), nil
 }
 
@@ -265,7 +265,7 @@ func (r *UserRepository) DeleteAccount(ctx context.Context, id string) error {
 	if err := r.db.WithContext(ctx).Delete(&models.Account{}, "id = ?", id).Error; err != nil {
 		return r.handleDBError(err)
 	}
-	
+
 	return nil
 }
 
@@ -273,7 +273,7 @@ func (r *UserRepository) DeleteAccount(ctx context.Context, id string) error {
 
 // domainToModel 领域对象转数据模型
 func (r *UserRepository) domainToModel(user *userDomain.User) *models.User {
-	return &models.User{
+	model := &models.User{
 		ID:                   user.ID,
 		Name:                 user.Name,
 		Email:                user.Email,
@@ -287,11 +287,27 @@ func (r *UserRepository) domainToModel(user *userDomain.User) *models.User {
 		NotifyMeta:           user.NotifyMeta,
 		LastSignTime:         user.LastSignTime,
 		DeactivatedTime:      user.DeactivatedTime,
-		CreatedTime:          user.CreatedTime,
-		LastModifiedTime:     user.LastModifiedTime,
 		PermanentDeletedTime: user.PermanentDeletedTime,
 		RefMeta:              user.RefMeta,
 	}
+
+	// 处理软删除字段
+	if user.DeletedTime != nil {
+		model.DeletedTime = gorm.DeletedAt{
+			Time:  *user.DeletedTime,
+			Valid: true,
+		}
+	}
+
+	// 只有在更新时才设置CreatedTime和LastModifiedTime
+	if !user.CreatedTime.IsZero() {
+		model.CreatedTime = user.CreatedTime
+	}
+	if user.LastModifiedTime != nil {
+		model.LastModifiedTime = user.LastModifiedTime
+	}
+
+	return model
 }
 
 // modelToDomain 数据模型转领域对象
@@ -299,7 +315,7 @@ func (r *UserRepository) modelToDomain(model *models.User) *userDomain.User {
 	isSystem := false
 	isAdmin := false
 	isTrialUsed := false
-	
+
 	if model.IsSystem != nil {
 		isSystem = *model.IsSystem
 	}
@@ -309,12 +325,12 @@ func (r *UserRepository) modelToDomain(model *models.User) *userDomain.User {
 	if model.IsTrialUsed != nil {
 		isTrialUsed = *model.IsTrialUsed
 	}
-	
+
 	var deletedTime *time.Time
 	if model.DeletedTime.Valid {
 		deletedTime = &model.DeletedTime.Time
 	}
-	
+
 	return &userDomain.User{
 		ID:                   model.ID,
 		Name:                 model.Name,
@@ -398,7 +414,7 @@ func (r *UserRepository) applyListFilter(query *gorm.DB, filter userDomain.ListF
 		searchTerm := "%" + strings.ToLower(filter.Search) + "%"
 		query = query.Where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", searchTerm, searchTerm)
 	}
-	
+
 	return query
 }
 
@@ -439,7 +455,7 @@ func (r *UserRepository) applyCountFilter(query *gorm.DB, filter userDomain.Coun
 		searchTerm := "%" + strings.ToLower(filter.Search) + "%"
 		query = query.Where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", searchTerm, searchTerm)
 	}
-	
+
 	return query
 }
 
@@ -454,6 +470,6 @@ func (r *UserRepository) handleDBError(err error) error {
 			return errors.ErrPhoneExists
 		}
 	}
-	
+
 	return errors.ErrDatabaseOperation.WithDetails(err.Error())
 }
